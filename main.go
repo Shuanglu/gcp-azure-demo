@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -20,12 +22,13 @@ var (
 	gcpMetadataRequestHeader = map[string]string{
 		"Metadata-Flavor": "Google",
 	}
-	gcpOpenIDToken = ""
-	err            error
-	log            = logrus.New()
-	azTenantID     = os.Getenv("AZURE_TENANT_ID")
-	azClientID     = os.Getenv("AZURE_CLIENT_ID")
-	azSubID        = os.Getenv("AZURE_SUBSCRIPTION_ID")
+	gcpOpenIDToken             = ""
+	err                        error
+	log                        = logrus.New()
+	azTenantID                 = os.Getenv("AZURE_TENANT_ID")
+	azClientID                 = os.Getenv("AZURE_CLIENT_ID")
+	azSubID                    = os.Getenv("AZURE_SUBSCRIPTION_ID")
+	errMsg_unauthorized_client = regexp.MustCompile("\"error\": \"unauthorized_client\\")
 )
 
 type User struct {
@@ -63,8 +66,24 @@ func main() {
 		},
 	})
 	if err != nil {
-		log.Errorf("failed to get the access token from Azure", err)
-		errorHandling()
+		for {
+			azToken, err = azClientAssertCredential.GetToken(context.TODO(), policy.TokenRequestOptions{
+				Scopes: []string{
+					"https://vault.azure.net/.default",
+				},
+			})
+			if err == nil {
+				break
+			} else {
+				if res := errMsg_unauthorized_client.FindString(err.Error()); res != "" {
+					log.Errorf("Will retry in 10s because it failed to get the access token from Azure", err)
+					time.Sleep(10 * time.Second)
+				} else {
+					log.Errorf("Won't retry due to error: %v", err)
+					errorHandling()
+				}
+			}
+		}
 	}
 	log.Infof("Azure Token: %v", azToken)
 	azRGClient, err := azarm.NewResourceGroupsClient(azSubID, azClientAssertCredential, &arm.ClientOptions{})
