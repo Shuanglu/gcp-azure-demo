@@ -28,7 +28,7 @@ var (
 	azTenantID                 = os.Getenv("AZURE_TENANT_ID")
 	azClientID                 = os.Getenv("AZURE_CLIENT_ID")
 	azSubID                    = os.Getenv("AZURE_SUBSCRIPTION_ID")
-	errMsg_unauthorized_client = regexp.MustCompile("\"error\": \"unauthorized_client\\")
+	errMsg_unauthorized_client = regexp.MustCompile("\"error\": \"unauthorized_client\"")
 )
 
 type User struct {
@@ -54,7 +54,7 @@ func main() {
 		log.Errorf("failed to get the OpenID token from GCP", err)
 		errorHandling()
 	}
-	log.Infof("gcpToken: %v", gcpOpenIDToken)
+	//log.Infof("gcpToken: %v", gcpOpenIDToken)
 	azClientAssertCredential, err := user.GetAzureCredential(context.TODO(), gcpOpenIDToken)
 	if err != nil {
 		log.Errorf("failed to get the credential from Azure", err)
@@ -85,7 +85,7 @@ func main() {
 			}
 		}
 	}
-	log.Infof("Azure Token: %v", azToken)
+	//log.Infof("Azure Token: %v", azToken)
 	azRGClient, err := azarm.NewResourceGroupsClient(azSubID, azClientAssertCredential, &arm.ClientOptions{})
 	if err != nil {
 		log.Errorf("failed to construct Azure ARM ResourceGroup client", err)

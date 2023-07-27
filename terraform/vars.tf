@@ -10,3 +10,8 @@ variable "gcp_issuer" {
 variable "azure_sub_id" {
   type = string
 }
+
+variable "azure_exchange_audience" {
+  type    = string
+  default = "api://AzureADTokenExchange"
+}
